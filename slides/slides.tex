@@ -681,10 +681,96 @@
 	\end{figure}
 \end{frame}
 
+\section{Entropy coding}
+
+\begin{frame}[allowframebreaks]{JPEG File Interchange Format}
+	\begin{itemize}
+		\item Popular storage standards for \texttt{.jpg} files
+		\item File consists of sections starting with markers
+		\begin{itemize}
+			\item Each marker has unique code
+			\item Some sections are fixed length, some are not
+		\end{itemize}
+		\item Sections have different purposes	
+		\begin{itemize}
+			\item \texttt{SOI} - start of image
+			\item \texttt{APP0} - basic metadata
+			\item \texttt{DQT} - define quantization table
+			\item \texttt{DHT} - define huffman table
+			\item etc.
+		\end{itemize}
+		\framebreak
+		\item DC coefficient (top-left matrix element) is special
+		\begin{itemize}
+			\item DC values are stored separately from AC values
+			\item Since "base" color is often similar between blocks, DC is coded using differential coding
+		\end{itemize}
+		\item AC coefficients are grouped by block
+		\begin{itemize}
+			\item There will be many zeroes in a block, especially in bottom right corner
+			\item Special zig-zag scanning keeps zeroes together
+			\item Run-length encoding removes groups of consecutive zeroes
+			\item Triplets are coded using Huffman tables
+		\end{itemize}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[c,plain]
+\vspace{5pt}
+\begin{figure}
+	\centering
+	\vspace{5pt}
+	\begin{tikzpicture}
+		\path[fill=white] (0,0) rectangle (6.4,6.4);
+		\foreach \x[
+		evaluate=\x as \startx using {\x*.8}] in {0,...,7}{
+			\foreach \y[
+			evaluate=\y as \i using int(\y*8+\x),
+			evaluate=\y as \value using {int(\sampleBlockQuantCoeffs[\i])},
+			evaluate=\y as \starty using {-\y*.8 + 6.4}] in {0,...,7}{
+				\path[fill=white] ($(\startx, \starty)$) rectangle ($(\startx, \starty) + .8*(1,-1) $);
+				\node at ($(\startx, \starty) + (0.4,-0.4) $) {\value};
+			}
+		}
+		\draw [draw=black!40!white, xstep=.8, ystep=.8] (0,0) grid (6.4,6.4) rectangle (0,0);
+		
+		\pause
+		\begin{scope}[scale=6.4/8]
+			\path[draw=orange,very thick,->] (0.5,7.5) -- (1.5,7.5) -- (0.5,6.5) -- (0.5,5.5) -- (2.5,7.5) -- (3.5,7.5) -- (0.5,4.5) -- (0.5,3.5) -- (4.5,7.5) -- (5.5,7.5) -- (0.5,2.5) -- (0.5,1.5) -- (6.5,7.5) -- (7.5,7.5) -- (0.5,0.5) -- (1.5,0.5) -- (7.5,6.5) -- (7.5,5.5) -- (2.5,0.5) -- (3.5,0.5) -- (7.5,4.5) -- (7.5,3.5) -- (4.5,0.5) -- (5.5,0.5) -- (7.5,2.5) -- (7.5,1.5) -- (6.5,0.5) -- (7.5,0.5);
+		\end{scope}
+	\end{tikzpicture}
+	\caption{Zig-zag scanning.}
+\end{figure}
+\end{frame}
+
+\begin{frame}{Run-length encoding with custom Huffman tables}
+	\begin{enumerate}
+		\item AC coefficients in zig-zag order are: \texttt{-7, 2, 0, 1, 4, 6, 7$\times$0, -11, 5, -1, 9$\times$0, -2, -1, -5, -1}, more \texttt{0}s\dots
+		\item Each non-\texttt{0} value results in a triplet \texttt{[Z,C,V]}, where
+		\begin{itemize}
+			\item \texttt{Z} is the number of preceding zeros,
+			\item \texttt{C} is the category number
+			\begin{itemize}
+				\item Category 0 is $\langle 0 \rangle$,
+				\item Category 1 is $\langle -1, 1 \rangle$,
+				\item Category 2 is $\langle -3, -2, 2, 3 \rangle$ etc.
+			\end{itemize}
+			\item \texttt{Z = C = 0} is EOB (End of Block)
+			\item pairs \texttt{(Z,C)} map to Huffman prefix code words
+			\item \texttt{V} is value ID in the category
+		\end{itemize}
+		\item Here we get \texttt{[0, 3, Id(-7)], [0, 2, Id(2)], [1, 1, Id(1)]} and so on
+		\item Triplets are converted to bit stream and saved \texttt{SOS} (Start of Scan) section
+	\end{enumerate}
+\end{frame}
+
 \begin{frame}{References}
-  \nocite{sayood2017introduction}
-  \bibliography{refs}
-  \bibliographystyle{abbrv}
+	\nocite{cp2015jpeg}
+	\nocite{epfl2016jpeg}
+	\nocite{charette2017anatomy}
+	\nocite{sayood2017introduction}
+	\bibliography{refs}
+	\bibliographystyle{abbrv}
 \end{frame}
 
 \end{document}
